@@ -1,0 +1,7 @@
+
+[caps]
+app = "/Users/simongranger/git/uswish/allinone/osx/samples/VideoPlayer/Debug/VideoPlayer"
+automationName = "YouiEngine"
+deviceName = "whatever"
+platformName = "YIMac"
+youiEngineAppAddress = "localhost"
