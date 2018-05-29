@@ -15,7 +15,7 @@ def add_header file, filename
 end
 
 def convert_name node_name
-  node_name.tr(" ", "_").tr("-", "_").tr(":", "")
+  node_name.tr(" ", "_").tr("-", "_").tr(":", "").downcase
 end
 
 def populate_locators file, doc, driver
