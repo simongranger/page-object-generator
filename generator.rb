@@ -2,98 +2,104 @@
 require 'appium_lib'
 require 'nokogiri'
 
+def get_driver
+  raise 'appium.txt file does not exist' if !File.exist?('appium.txt')
+  caps = Appium.load_appium_txt file:File.join(Dir.pwd, 'appium.txt')
+  Appium::Driver.new(caps, true)
+end
 
+def add_header file, filename
+  file.puts("#!/usr/bin/env ruby")
+  file.puts("require_relative '../../../../Test/appium/common/page_helper'")
+  file.puts("class "+  File.basename(filename,File.extname(filename)).capitalize + " < Page")
+end
 
+def convert_name node_name
+  node_name.tr(" ", "_").tr("-", "_").tr(":", "").downcase
+end
 
-caps = Appium.load_appium_txt file:File.join(Dir.pwd, 'appium.txt') 
-@driver = Appium::Driver.new(caps, true)
-@driver.start_driver
-
-
-
-  loop do 
-
-    puts "Enter FileName"
-    filename = gets.chomp
-    break if filename === "exit"
-    puts "FileName: " + filename
-
-    doc = Nokogiri::XML(@driver.driver.page_source)
-
-    #Creating file
-    dirname = 'generated'
-    unless File.directory?(dirname)
-      FileUtils.mkdir_p(dirname)
-    end
-    out_file = File.new("generated/" + filename, "w")
-
-    #Header
-    out_file.puts("#!/usr/bin/env ruby")
-    out_file.puts("require_relative '../../../../Test/appium/common/page_helper'")
-    out_file.puts("class "+  File.basename(filename,File.extname(filename)).capitalize + " < Page")
-    out_file.puts("")
-    
-    # TODO: A method should be created to avoid code repeat
-    # Going through all nodes that are hittable or displayed
-    out_file.puts("  # Locators")
+def populate_locators file, doc, driver
+  file.puts("\n\n# Locators")
     doc.xpath('//AppiumUAT//*').each do |node|
       if node['hittable'] === 'true' || node['displayed'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
           # TODO: Try finding a unique locator using attributes
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
           #TODO: A method should be created to replace characters
-          out_file.puts("  " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + " = { name: '" + node['name'] + "' }")
+          var_name = convert_name(node['name'])
+          file.puts("  #{var_name.upcase} = { name: '#{node['name']}' }")
         end
       end
     end
-    out_file.puts("")
+    file.puts("")
+end
 
-    out_file.puts("  # Displayed methods")
+def populate_display_methods file, doc, driver
+  file.puts("  # Displayed methods")
     # Going through all nodes that are displayed to make a 'displayed?' method
     doc.xpath('//AppiumUAT//*').each do |node|
 
       if node['displayed'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
-          out_file.puts("  def " + node['name'].tr(" ", "_").tr("-", "_").tr(":", "") + "_displayed?")
-          out_file.puts("    is_displayed? " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + "")
-          out_file.puts("  end")
+          var_name = convert_name(node['name'])
+          file.puts("  def #{var_name}_displayed?")
+          file.puts("    is_displayed? #{var_name.upcase}")
+          file.puts("  end")
         end
       end
     end
-    
-    out_file.puts("")
-    
-    # Going through all nodes that are hittable to make a 'click' method
-    out_file.puts("  # Click methods")
+end
+
+def populate_click_methods file, doc, driver
+  file.puts("  # Click methods")
     doc.xpath('//AppiumUAT//*').each do |node|
       
       if node['hittable'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
-          out_file.puts("  def click_" + node['name'].tr(" ", "_").tr("-", "_").tr(":", ""))
-          out_file.puts("    click " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + "")
-          out_file.puts("  end")
+          var_name = convert_name(node['name'])
+          file.puts("  def click_#{var_name}")
+          file.puts("    click #{var_name.upcase}")
+          file.puts("  end")
         end
       end
     end
-    out_file.puts("end")
-    out_file.close
+    file.puts("end")
+end
+
+module Page_Object
+  driver = get_driver
+  driver.start_driver
+
+  loop do 
+    puts "Enter the name of the screen"
+    filename = gets.chomp.downcase
+    break if filename == "exit"
+
+    doc = Nokogiri::XML(driver.driver.page_source)
+    dirname = 'generated'
+    FileUtils.mkdir_p(dirname) if !File.directory?(dirname)
+    page_file = File.new("generated/#{filename}", "w")
+    add_header(page_file, filename)
+
+    populate_locators(page_file, doc, driver)
+    populate_display_methods(page_file, doc, driver)
+    populate_click_methods(page_file, doc, driver)
+
+    page_file.close
   end
-
-
-
-
-@driver.driver_quit
+  driver.driver_quit
+end
