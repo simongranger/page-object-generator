@@ -3,7 +3,7 @@ require 'appium_lib'
 require 'nokogiri'
 
 def get_driver
-  raise if !File.directory?('appium.txt')
+  raise 'appium.txt file does not exist' if !File.exist?('appium.txt')
   caps = Appium.load_appium_txt file:File.join(Dir.pwd, 'appium.txt')
   Appium::Driver.new(caps, true)
 end
@@ -14,7 +14,7 @@ def add_header file, filename
   file.puts("class "+  File.basename(filename,File.extname(filename)).capitalize + " < Page")
 end
 
-def populate_locators file
+def populate_locators file, doc
   file.puts("\n\n# Locators")
     doc.xpath('//AppiumUAT//*').each do |node|
       if node['hittable'] === 'true' || node['displayed'] === 'true'
@@ -33,7 +33,7 @@ def populate_locators file
     file.puts("")
 end
 
-def populate_display_methods file
+def populate_display_methods file, doc
   file.puts("  # Displayed methods")
     # Going through all nodes that are displayed to make a 'displayed?' method
     doc.xpath('//AppiumUAT//*').each do |node|
@@ -53,7 +53,7 @@ def populate_display_methods file
     end
 end
 
-def populate_click_methods file
+def populate_click_methods file, doc
   file.puts("  # Click methods")
     doc.xpath('//AppiumUAT//*').each do |node|
       
@@ -74,25 +74,25 @@ def populate_click_methods file
 end
 
 module Page_Object
+  driver = get_driver
+  driver.start_driver
 
   loop do 
     puts "Enter the name of the screen"
     filename = gets.chomp.downcase
     break if filename == "exit"
 
-    driver = get_driver
-    driver.start_driver
     doc = Nokogiri::XML(driver.driver.page_source)
     dirname = 'generated'
     FileUtils.mkdir_p(dirname) if !File.directory?(dirname)
     page_file = File.new("generated/#{filename}", "w")
     add_header(page_file, filename)
 
-    populate_locators page_file
-    populate_display_methods page_file
-    populate_click_methods page_file
+    populate_locators(page_file, doc)
+    populate_display_methods(page_file, doc)
+    populate_click_methods(page_file, doc)
 
     page_file.close
   end
-  @driver.driver_quit
+  driver.driver_quit
 end
