@@ -14,6 +14,10 @@ def add_header file, filename
   file.puts("class "+  File.basename(filename,File.extname(filename)).capitalize + " < Page")
 end
 
+def convert_name node_name
+  node_name.tr(" ", "_").tr("-", "_").tr(":", "")
+end
+
 def populate_locators file, doc
   file.puts("\n\n# Locators")
     doc.xpath('//AppiumUAT//*').each do |node|
@@ -26,7 +30,8 @@ def populate_locators file, doc
         else
           puts "Unique Locator"
           #TODO: A method should be created to replace characters
-          file.puts("  " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + " = { name: '" + node['name'] + "' }")
+          var_name = convert_name(node['name'])
+          file.puts("  #{var_name.upcase} = { name: '#{node['name']}' }")
         end
       end
     end
@@ -45,8 +50,9 @@ def populate_display_methods file, doc
           #@driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
-          file.puts("  def " + node['name'].tr(" ", "_").tr("-", "_").tr(":", "") + "_displayed?")
-          file.puts("    is_displayed? " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + "")
+          var_name = convert_name(node['name'])
+          file.puts("  def #{var_name}_displayed?")
+          file.puts("    is_displayed? #{var_name.upcase}")
           file.puts("  end")
         end
       end
@@ -64,8 +70,9 @@ def populate_click_methods file, doc
           #@driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
-          file.puts("  def click_" + node['name'].tr(" ", "_").tr("-", "_").tr(":", ""))
-          file.puts("    click " + node['name'].upcase.tr(" ", "_").tr("-", "_").tr(":", "") + "")
+          var_name = convert_name(node['name'])
+          file.puts("  def click_#{var_name}")
+          file.puts("    click #{var_name.upcase}")
           file.puts("  end")
         end
       end
