@@ -18,15 +18,15 @@ def convert_name node_name
   node_name.tr(" ", "_").tr("-", "_").tr(":", "")
 end
 
-def populate_locators file, doc
+def populate_locators file, doc, driver
   file.puts("\n\n# Locators")
     doc.xpath('//AppiumUAT//*').each do |node|
       if node['hittable'] === 'true' || node['displayed'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
           # TODO: Try finding a unique locator using attributes
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
           #TODO: A method should be created to replace characters
@@ -38,16 +38,16 @@ def populate_locators file, doc
     file.puts("")
 end
 
-def populate_display_methods file, doc
+def populate_display_methods file, doc, driver
   file.puts("  # Displayed methods")
     # Going through all nodes that are displayed to make a 'displayed?' method
     doc.xpath('//AppiumUAT//*').each do |node|
 
       if node['displayed'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
           var_name = convert_name(node['name'])
@@ -59,15 +59,15 @@ def populate_display_methods file, doc
     end
 end
 
-def populate_click_methods file, doc
+def populate_click_methods file, doc, driver
   file.puts("  # Click methods")
     doc.xpath('//AppiumUAT//*').each do |node|
       
       if node['hittable'] === 'true'
-        elements = @driver.find_elements(name: node['name'])
+        elements = driver.find_elements(name: node['name'])
         if (elements.size > 1)
           puts "Not a unique Locator"
-          #@driver.find_elements(name: node['name'])
+          #driver.find_elements(name: node['name'])
         else
           puts "Unique Locator"
           var_name = convert_name(node['name'])
@@ -95,9 +95,9 @@ module Page_Object
     page_file = File.new("generated/#{filename}", "w")
     add_header(page_file, filename)
 
-    populate_locators(page_file, doc)
-    populate_display_methods(page_file, doc)
-    populate_click_methods(page_file, doc)
+    populate_locators(page_file, doc, driver)
+    populate_display_methods(page_file, doc, driver)
+    populate_click_methods(page_file, doc, driver)
 
     page_file.close
   end
